@@ -1,0 +1,17 @@
+{
+  "name": "password_security_prediction_model",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@tensorflow/tfjs": "^3.7.0",
+    "inko": "^1.1.1",
+    "tfjs-node-save": "0.0.2",
+    "zxcvbn": "^4.4.2"
+  }
+}
