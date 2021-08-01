@@ -1,30 +1,28 @@
 const fs = require('fs');
 
 var tf = require('@tensorflow/tfjs');
-require("tfjs-node-save");
-
+require('tfjs-node-save');
 
 var json = fs.readFileSync(__dirname + '/../files/passwordModelTrainPara.json', 'utf8');
 json = JSON.parse(json);
-
 
 var oriDatas = fs.readFileSync(__dirname + '/../files/LeakPasswordFeatures.txt', 'utf8');
 oriDatas = oriDatas.split('\n');
 
 var datas = [];
-for(let i = 0; i < oriDatas.length; i++) {
+for (let i = 0; i < oriDatas.length; i++) {
     datas[i] = oriDatas[i].split('\r')[0];
 }
 
-var leakString = []
+var leakString = [];
 var leakDataFeature1 = [];
 var leakDataFeature2 = [];
 var leakDataFeature3 = [];
 var leakDataValue = [];
 
 var leakValue = [];
-        
-for(let i = 0; i < datas.length - 1; i++) {
+
+for (let i = 0; i < datas.length - 1; i++) {
     leakString[i] = datas[i].split(',')[0];
     leakDataFeature1[i] = datas[i].split(',')[1];
     leakDataFeature2[i] = datas[i].split(',')[2];
@@ -32,16 +30,16 @@ for(let i = 0; i < datas.length - 1; i++) {
     leakDataValue[i] = 0;
     leakValue[i] = datas[i].split(',')[4];
 }
-        
+
 oriDatas = fs.readFileSync(__dirname + '/../files/notLeakPasswordFeatures.txt', 'utf8');
 oriDatas = oriDatas.split('\n');
 
 datas = [];
-for(let i = 0; i < oriDatas.length; i++) {
+for (let i = 0; i < oriDatas.length; i++) {
     datas[i] = oriDatas[i].split('\r')[0];
 }
 
-var notLeakString = []
+var notLeakString = [];
 var notLeakDataFeature1 = [];
 var notLeakDataFeature2 = [];
 var notLeakDataFeature3 = [];
@@ -49,7 +47,7 @@ var notLeakDataValue = [];
 
 var notLeakValue = [];
 
-for(let i = 0; i < datas.length - 1; i++) {
+for (let i = 0; i < datas.length - 1; i++) {
     notLeakString[i] = datas[i].split(',')[0];
     notLeakDataFeature1[i] = datas[i].split(',')[1];
     notLeakDataFeature2[i] = datas[i].split(',')[2];
@@ -62,18 +60,17 @@ var string = [];
 var feature1 = [];
 var feature2 = [];
 var feature3 = [];
-var value = []
+var value = [];
 
 var resultValue = [];
 
-for(let i = 0; i < 70000; i++) {
+for (let i = 0; i < 70000; i++) {
     string[2 * i] = leakString[i];
     feature1[2 * i] = leakDataFeature1[i];
     feature2[2 * i] = leakDataFeature2[i];
     feature3[2 * i] = leakDataFeature3[i];
     value[2 * i] = leakDataValue[i];
     resultValue[2 * i] = leakValue[i];
-
 
     string[2 * i + 1] = notLeakString[i];
     feature1[2 * i + 1] = notLeakDataFeature1[i];
@@ -91,12 +88,12 @@ var validationLabel = [];
 
 var validationString = [];
 
-for(let i = 0; i < 50000; i++) {
+for (let i = 0; i < 50000; i++) {
     trainData[i] = [parseInt(feature1[i]), parseInt(feature2[i]), parseInt(feature3[i])];
     trainLabel[i] = parseInt(value[i]);
 }
 
-for(let i = 0; i < 140000; i++) {
+for (let i = 0; i < 140000; i++) {
     validationString[i] = string[i];
     validationData[i] = [parseInt(feature1[i]), parseInt(feature2[i]), parseInt(feature3[i])];
     validationLabel[i] = parseInt(value[i]);
@@ -107,35 +104,36 @@ var trainLabelTensor = tf.tensor(trainLabel);
 var validationDataTensor = tf.tensor(validationData);
 var validationLabelTensor = tf.tensor(validationLabel);
 
-var X = tf.input({shape: [json.unit[0]]});
-var h1 = tf.layers.dense({units: json.unit[1], activation:json.activation}).apply(X);
-var h2 = tf.layers.dense({units: json.unit[2], activation:json.activation}).apply(h1);
-var Y = tf.layers.dense({units: json.unit[3], activation: 'sigmoid'}).apply(h2);
+var X = tf.input({ shape: [json.unit[0]] });
+var h1 = tf.layers.dense({ units: json.unit[1], activation: json.activation }).apply(X);
+var h2 = tf.layers.dense({ units: json.unit[2], activation: json.activation }).apply(h1);
+var Y = tf.layers.dense({ units: json.unit[3], activation: 'sigmoid' }).apply(h2);
 
 var model = tf.model({ inputs: X, outputs: Y });
 
-var compileParam = { optimizer: tf.train.adam(), loss: tf.losses.meanSquaredError}
+var compileParam = { optimizer: tf.train.adam(), loss: tf.losses.meanSquaredError };
 model.compile(compileParam);
 
 var history = [];
 
-var fitParam = { epochs: json.epoch, callbacks:{
-    onEpochEnd: function(epoch, logs) {
-        console.log('epoch', epoch, logs, "RMSE -> ", Math.sqrt(logs.loss));
-        history.push(logs);
-    }
-}};
+var fitParam = {
+    epochs: json.epoch,
+    callbacks: {
+        onEpochEnd: function (epoch, logs) {
+            console.log('epoch', epoch, logs, 'RMSE -> ', Math.sqrt(logs.loss));
+            history.push(logs);
+        },
+    },
+};
 
 var goodNoLeakPwd = [];
 var goodLeakPwd = [];
 
-
-model.fit(trainDataTensor, trainLabelTensor, fitParam).then(async function(result) {
-
+model.fit(trainDataTensor, trainLabelTensor, fitParam).then(async function (result) {
     var validationResult = model.predict(validationDataTensor);
-    validationResult = Array.from(validationResult.dataSync())
+    validationResult = Array.from(validationResult.dataSync());
 
-    var validationAnswer = Array.from(validationLabelTensor.dataSync())
+    var validationAnswer = Array.from(validationLabelTensor.dataSync());
 
     var good = 0;
     var noGood = 0;
@@ -144,25 +142,38 @@ model.fit(trainDataTensor, trainLabelTensor, fitParam).then(async function(resul
 
     fs.writeFileSync(__dirname + '/../files/updateNotLeakPasswordFeatures.txt', '', 'utf8');
     fs.writeFileSync(__dirname + '/../files/updateLeakPasswordFeatures.txt', '', 'utf8');
-    
-    for(let i = 0; i < validationResult.length; i++) {
-        if((validationResult[i] > checkPoint && validationAnswer[i] > checkPoint) || (validationResult[i] <= checkPoint && validationAnswer[i] <= checkPoint)) {
+
+    for (let i = 0; i < validationResult.length; i++) {
+        if ((validationResult[i] > checkPoint && validationAnswer[i] > checkPoint) || (validationResult[i] <= checkPoint && validationAnswer[i] <= checkPoint)) {
             good++;
-            if(validationResult[i] > checkPoint) {
-                fs.appendFileSync(__dirname + '/../files/updateNotLeakPasswordFeatures.txt', validationString[i] + ',' + validationData[i][0] + ',' + validationData[i][1] + ',' + validationData[i][2] + ',' + resultValue[i] + '\n', 'utf8');
+            if (validationResult[i] > checkPoint) {
+                fs.appendFileSync(
+                    __dirname + '/../files/updateNotLeakPasswordFeatures.txt',
+                    validationString[i] + ',' + validationData[i][0] + ',' + validationData[i][1] + ',' + validationData[i][2] + ',' + resultValue[i] + '\n',
+                    'utf8'
+                );
+            } else {
+                fs.appendFileSync(
+                    __dirname + '/../files/updateLeakPasswordFeatures.txt',
+                    validationString[i] + ',' + validationData[i][0] + ',' + validationData[i][1] + ',' + validationData[i][2] + ',' + resultValue[i] + '\n',
+                    'utf8'
+                );
             }
-            else {
-                fs.appendFileSync(__dirname + '/../files/updateLeakPasswordFeatures.txt', validationString[i] + ',' + validationData[i][0] + ',' + validationData[i][1] + ',' + validationData[i][2] + ',' + resultValue[i] + '\n', 'utf8');
-            }
-        }
-        else {
+        } else {
             noGood++;
-            if(noGood % 2 != 0) {
-                if(validationAnswer[i] > checkPoint) {
-                    fs.appendFileSync(__dirname + '/../files/updateNotLeakPasswordFeatures.txt', validationString[i] + ',' + validationData[i][0] + ',' + validationData[i][1] + ',' + validationData[i][2] + ',' + resultValue[i] + '\n', 'utf8');
-                }
-                else {
-                    fs.appendFileSync(__dirname + '/../files/updateLeakPasswordFeatures.txt', validationString[i] + ',' + validationData[i][0] + ',' + validationData[i][1] + ',' + validationData[i][2] + ',' + resultValue[i] + '\n', 'utf8');
+            if (noGood % 2 != 0) {
+                if (validationAnswer[i] > checkPoint) {
+                    fs.appendFileSync(
+                        __dirname + '/../files/updateNotLeakPasswordFeatures.txt',
+                        validationString[i] + ',' + validationData[i][0] + ',' + validationData[i][1] + ',' + validationData[i][2] + ',' + resultValue[i] + '\n',
+                        'utf8'
+                    );
+                } else {
+                    fs.appendFileSync(
+                        __dirname + '/../files/updateLeakPasswordFeatures.txt',
+                        validationString[i] + ',' + validationData[i][0] + ',' + validationData[i][1] + ',' + validationData[i][2] + ',' + resultValue[i] + '\n',
+                        'utf8'
+                    );
                 }
             }
         }
@@ -172,7 +183,7 @@ model.fit(trainDataTensor, trainLabelTensor, fitParam).then(async function(resul
     console.log(`good: ${good}, noGood: ${noGood}`);
     console.log(`accuracy: ${accuracy}`);
 
-    model.save("file://" + __dirname +"/../model/").then(async function() {
-        console.log("Successfully saved the artifacts.");
+    model.save('file://' + __dirname + '/../model/').then(async function () {
+        console.log('Successfully saved the artifacts.');
     });
 });
